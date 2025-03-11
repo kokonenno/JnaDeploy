@@ -1,4 +1,4 @@
-version: "3"
+version: "3.8"  # 최신 버전 사용
 services:
 
   oj-redis:
@@ -6,60 +6,60 @@ services:
     container_name: oj-redis
     restart: always
     volumes:
-      - ./data/redis:/data
-  
+      - /home/$(whoami)/deploy_data/redis:/data  # WSL 내 저장 위치로 변경
+
   oj-postgres:
     image: postgres:10-alpine
     container_name: oj-postgres
     restart: always
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - /home/$(whoami)/deploy_data/postgres:/var/lib/postgresql/data  # 경로 변경　$(whoami)に自分のUser名変更
     environment:
       - POSTGRES_DB=onlinejudge
       - POSTGRES_USER=onlinejudge
       - POSTGRES_PASSWORD=onlinejudge
 
   judge-server:
-      image: registry.cn-hangzhou.aliyuncs.com/onlinejudge/judge_server
-      container_name: judge-server
-      platform: linux/amd64   # 추가
-      restart: always
-      read_only: true
-      cap_drop:
-        - SETPCAP
-        - MKNOD
-        - NET_BIND_SERVICE
-        - SYS_CHROOT
-        - SETFCAP
-        - FSETID
-      tmpfs:
-        - /tmp
-      volumes:
-        - ./data/backend/test_case:/test_case:ro
-        - ./data/judge_server/log:/log
-        - ./data/judge_server/run:/judger
-      environment:
-        - SERVICE_URL=http://judge-server:8080
-        - BACKEND_URL=http://oj-backend:8000/api/judge_server_heartbeat/
-        - TOKEN=CHANGE_THIS
+    image: onlinejudge/judge_server  # 중국 레지스트리 제거
+    container_name: judge-server
+    platform: linux/amd64
+    restart: always
+    read_only: true
+    cap_drop:
+      - SETPCAP
+      - MKNOD
+      - NET_BIND_SERVICE
+      - SYS_CHROOT
+      - SETFCAP
+      - FSETID
+    tmpfs:
+      - /tmp
+    volumes:
+      - /home/$(whoami)/deploy_data/backend/test_case:/test_case:ro  #$(whoami)に自分のUser名変更
+      - /home/$(whoami)/deploy_data/judge_server/log:/log            #$(whoami)に自分のUser名変更
+      - /home/$(whoami)/deploy_data/judge_server/run:/judger         #$(whoami)に自分のUser名変更
+    environment:
+      - SERVICE_URL=http://judge-server:8080
+      - BACKEND_URL=http://oj-backend:8000/api/judge_server_heartbeat/
+      - TOKEN=CHANGE_THIS
 
   oj-backend:
-      image: registry.cn-hangzhou.aliyuncs.com/onlinejudge/oj_backend
-      container_name: oj-backend
-      platform: linux/amd64   # 추가
-      restart: always
-      depends_on:
-        - oj-redis
-        - oj-postgres
-        - judge-server
-      volumes:
-        - ./data/backend:/data
-        - ./data/backend/dist:/app/dist
-      environment:
-        - POSTGRES_DB=onlinejudge
-        - POSTGRES_USER=onlinejudge
-        - POSTGRES_PASSWORD=onlinejudge
-        - JUDGE_SERVER_TOKEN=CHANGE_THIS
-      ports:
-        - "0.0.0.0:80:8000"
-        - "0.0.0.0:443:1443"
+    image: onlinejudge/oj_backend  # 중국 레지스트리 제거
+    container_name: oj-backend
+    platform: linux/amd64
+    restart: always
+    depends_on:
+      - oj-redis
+      - oj-postgres
+      - judge-server
+    volumes:
+      - /home/$(whoami)/deploy_data/backend:/data              #$(whoami)に自分のUser名変更
+      - /home/$(whoami)/deploy_data/backend/dist:/app/dist    #$(whoami)に自分のUser名変更
+    environment:
+      - POSTGRES_DB=jnajudge
+      - POSTGRES_USER=jnajudge
+      - POSTGRES_PASSWORD=jnajudge
+      - JUDGE_SERVER_TOKEN=CHANGE_THIS
+    ports:
+      - "8080:8000"  # 포트 80 충돌 방지
+      - "8443:1443"
